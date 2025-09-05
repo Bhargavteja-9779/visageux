@@ -1,0 +1,5 @@
+ablation,metric,spearman_r,pval
+drop_cursor,UFI,0.7745966692414834,0.22540333075851657
+drop_cursor,RCS,1.0,0.0
+drop_scroll,UFI,1.0,0.0
+drop_scroll,RCS,-0.10540925533894598,0.894590744661054
