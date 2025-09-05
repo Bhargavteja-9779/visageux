@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from typing import List, Union
 import redis
+from fastapi import Query
+from typing import List, Literal
+from .privacy.aggregator import dp_group_aggregate, DEFAULTS
 
 from .events import Event
 
@@ -51,3 +54,38 @@ def ingest(payload: Union[Event, List[Event]] = Body(...)):
             return {"status": "queued", "count": 1}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+@app.get("/privacy/config")
+def privacy_config():
+    return DEFAULTS
+
+@app.post("/privacy/aggregate")
+def privacy_aggregate(
+    group_by: List[str] = Query(..., description="columns to group by, e.g., sess_key or page_section (later)"),
+    metric: Literal["UFI","RCS","MIV"] = Query("UFI"),
+    agg: Literal["mean","sum","count"] = Query("mean"),
+    epsilon: float = Query(DEFAULTS["epsilon"]),
+    k: int = Query(DEFAULTS["k"]),
+    clip_lo: float = Query(DEFAULTS["clip_lo"]),
+    clip_hi: float = Query(DEFAULTS["clip_hi"]),
+):
+    try:
+        df = dp_group_aggregate(group_by, metric, agg, epsilon, k, clip_lo, clip_hi)
+        return {"rows": df.to_dict(orient="records")}
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
+    
+@app.get("/privacy/aggregate")
+def privacy_aggregate_get(
+    group_by: List[str] = Query(..., description="columns to group by, e.g., sess_key"),
+    metric: Literal["UFI","RCS","MIV"] = Query("UFI"),
+    agg: Literal["mean","sum","count"] = Query("mean"),
+    epsilon: float = Query(DEFAULTS["epsilon"]),
+    k: int = Query(DEFAULTS["k"]),
+    clip_lo: float = Query(DEFAULTS["clip_lo"]),
+    clip_hi: float = Query(DEFAULTS["clip_hi"]),
+):
+    try:
+        df = dp_group_aggregate(group_by, metric, agg, epsilon, k, clip_lo, clip_hi)
+        return {"rows": df.to_dict(orient="records")}
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
